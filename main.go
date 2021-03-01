@@ -61,9 +61,9 @@ func main() {
 	app.Post("/close-room", closeRoom)
 
 	// 404 handler.
-	// app.Use(func(c *fiber.Ctx) error {
-	// 	return c.SendStatus(404) // => 404 "Not Found"
-	// })
+	app.Use(func(c *fiber.Ctx) error {
+		return c.SendStatus(404) // => 404 "Not Found"
+	})
 
 	// Get port from env vars.
 	var port = os.Getenv("PORT")
@@ -79,12 +79,12 @@ func main() {
 
 func createRoom(c *fiber.Ctx) error {
 
-	fmt.Println("Photon: create room!")
-	return c.SendString("Golang Request: " + c.Request().String())
+	fmt.Println("Photon: create room: " + c.Request().String())
+	return c.Next()
 }
 
 func closeRoom(c *fiber.Ctx) error {
 
-	fmt.Println("Photon: close room!")
-	return c.SendString("Golang Request: " + c.Request().String())
+	fmt.Println("Photon: close room:" + c.Request().String())
+	return c.Next()
 }
