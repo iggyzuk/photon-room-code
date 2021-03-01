@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -55,6 +56,9 @@ func main() {
 		// navigate to => http://localhost:3000/api/user/iggy
 	})
 
+	// Photon webhook testing.
+	app.Post("/photon/*", photonHandler)
+
 	// 404 handler.
 	app.Use(func(c *fiber.Ctx) error {
 		return c.SendStatus(404) // => 404 "Not Found"
@@ -70,4 +74,17 @@ func main() {
 
 	// Start server on http://${heroku-url}:${port}
 	app.Listen(":" + port)
+}
+
+func photonHandler(c *fiber.Ctx) error {
+
+	fmt.Println("Photon Request!")
+
+	// return serialized JSON.
+	if c.Params("*") == "GameCreate'" {
+		fmt.Println("GameCreate" + c.Request().String())
+	}
+
+	return c.SendString("API path: " + c.Params("*") + " -> do lookups with these values")
+
 }
