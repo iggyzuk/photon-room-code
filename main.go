@@ -57,7 +57,8 @@ func main() {
 	})
 
 	// Photon webhook testing.
-	app.Post("/photon/*", photonHandler)
+	app.Post("/open-room", createRoom)
+	app.Post("/close-room", closeRoom)
 
 	// 404 handler.
 	app.Use(func(c *fiber.Ctx) error {
@@ -76,15 +77,14 @@ func main() {
 	app.Listen(":" + port)
 }
 
-func photonHandler(c *fiber.Ctx) error {
+func createRoom(c *fiber.Ctx) error {
 
-	fmt.Println("Photon Request!")
+	fmt.Println("Photon: create room!")
+	return c.SendString("Golang Request: " + c.Request().String())
+}
 
-	// return serialized JSON.
-	if c.Params("*") == "GameCreate" {
-		fmt.Println("GameCreate" + c.Request().String())
-	}
+func closeRoom(c *fiber.Ctx) error {
 
-	return c.SendString("API path: " + c.Params("*") + " -> do lookups with these values")
-
+	fmt.Println("Photon: close room!")
+	return c.SendString("Golang Request: " + c.Request().String())
 }
