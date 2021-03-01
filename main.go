@@ -57,7 +57,7 @@ func main() {
 	})
 
 	// Photon webhook testing.
-	app.Post("/open-room", createRoom)
+	app.Post("/create-room", createRoom)
 	app.Post("/close-room", closeRoom)
 
 	// 404 handler.
@@ -80,11 +80,11 @@ func main() {
 func createRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: create room: " + c.Request().String())
-	return c.Next()
+	return c.Send(c.Body())
 }
 
 func closeRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: close room:" + c.Request().String())
-	return c.Next()
+	return c.Send(c.Body())
 }
