@@ -80,11 +80,11 @@ func main() {
 func createRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: create room: " + c.Request().String())
-	return c.Send(c.Body())
+	return c.SendString("")
 }
 
 func closeRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: close room:" + c.Request().String())
-	return c.Send(c.Body())
+	return c.SendString("")
 }
