@@ -40,7 +40,7 @@ type RoomCode struct {
 	created bool
 }
 
-var roomCodes = make(map[string]RoomCode)
+var roomCodes = make(map[string]*RoomCode)
 var simpleCount int
 
 // CreateRoomRequest is a Photon type that is sent to us when a new room is created.
@@ -93,7 +93,7 @@ func genCode(c *fiber.Ctx) error {
 
 	fmt.Println("Generated a new code: " + roomCode.code)
 
-	go timeoutRoom(&roomCode)
+	go timeoutRoom(roomCode)
 
 	return c.SendString(roomCode.code)
 }
@@ -143,13 +143,13 @@ func closeRoom(c *fiber.Ctx) error {
 }
 
 // getNextCode generates the next unique room code.
-func getNextCode() RoomCode {
+func getNextCode() *RoomCode {
 
 	// Increment count.
 	simpleCount++
 
 	// Construct new room code object.
-	var roomCode = RoomCode{
+	var roomCode = &RoomCode{
 		strconv.Itoa(simpleCount),
 		false,
 	}
