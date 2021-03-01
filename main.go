@@ -77,14 +77,32 @@ func main() {
 	app.Listen(":" + port)
 }
 
+// RoomResponse is what's send back to Photon.
+type RoomResponse struct {
+	State      string
+	ResultCode int
+}
+
 func createRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: create room: " + c.Request().String())
-	return c.SendString("")
+
+	var response = RoomResponse{
+		"Creating new room",
+		0,
+	}
+
+	return c.JSON(response)
 }
 
 func closeRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: close room:" + c.Request().String())
-	return c.SendString("")
+
+	var response = RoomResponse{
+		"Closing the room",
+		0,
+	}
+
+	return c.JSON(response)
 }
