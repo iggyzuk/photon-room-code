@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -12,9 +13,9 @@ func main() {
 	app := fiber.New()
 
 	// Photon webhook testing.
-	app.Post("/create-room", createRoom)
-	app.Post("/close-room", closeRoom)
-	app.Get("/room-code/*", roomCode)
+	app.Get("/room/gen_code", genCode)
+	app.Post("/room/create", createRoom)
+	app.Post("/room/close", closeRoom)
 
 	// 404 handler.
 	app.Use(func(c *fiber.Ctx) error {
@@ -33,10 +34,17 @@ func main() {
 	app.Listen(":" + port)
 }
 
-var roomCodes = make(map[string]int)
-var roomCount int
+// RoomCode is a server-side type that keeps track of all codes.
+type RoomCode struct {
+	code    string
+	created bool
+}
 
-type createRoomRequest struct {
+var roomCodes = make(map[string]RoomCode)
+var simpleCount int
+
+// CreateRoomRequest is a Photon type that is sent to us when a new room is created.
+type CreateRoomRequest struct {
 	ActorNr       int    `json:"ActorNr"`
 	AppVersion    string `json:"AppVersion"`
 	AppID         string `json:"AppId"`
@@ -62,7 +70,8 @@ type createRoomRequest struct {
 	Nickname string `json:"Nickname"`
 }
 
-type closeRoomRequest struct {
+// CloseRoomRequest is a Photon type that is sent to us when a room is closed.
+type CloseRoomRequest struct {
 	ActorCount int    `json:"ActorCount"`
 	AppVersion string `json:"AppVersion"`
 	AppID      string `json:"AppId"`
@@ -77,63 +86,90 @@ type RoomResponse struct {
 	ResultCode int
 }
 
-func createRoom(c *fiber.Ctx) error {
-	// New room struct
-	room := new(createRoomRequest)
+// genCode is a handler that is called by the user to get a new code.
+func genCode(c *fiber.Ctx) error {
 
-	// Parse body into struct
-	if err := c.BodyParser(room); err != nil {
-		return c.Status(400).SendString(err.Error())
-	}
+	var roomCode = getNextCode() // Generate a new code.
 
-	// Generate code
-	roomCount++
-	roomCodes[room.GameID] = roomCount
+	fmt.Println("Generated a new code: " + roomCode.code)
 
-	fmt.Println("Room Created: " + room.GameID + ", Code: " + strconv.Itoa(roomCodes[room.GameID]))
-	fmt.Println("Details: " + c.Request().String())
+	go timeoutRoom(&roomCode)
 
-	var response = RoomResponse{
-		"",
-		0,
-	}
-
-	return c.JSON(response)
+	return c.SendString(roomCode.code)
 }
 
+// createRoom is a handler for a Photon webhook that is called when a new room is created.
+func createRoom(c *fiber.Ctx) error {
+
+	fmt.Println("New room created.")
+
+	// New room struct.
+	room := new(CreateRoomRequest)
+
+	// Parse body into struct.
+	if err := c.BodyParser(room); err != nil {
+		return c.Status(400).SendString(err.Error())
+	}
+
+	if roomCode, ok := roomCodes[room.GameID]; ok {
+		roomCode.created = true // Confirm that the room was created by Photon.
+		fmt.Println("Confirming that room: " + roomCode.code + " has been created by Photon.")
+		return c.JSON(RoomResponse{"", 0}) // Success.
+	}
+
+	// The code must have been removed – due to timeout.
+	fmt.Println("No code for user: " + room.UserID)
+	return c.Status(400).SendString("No code for user: " + room.UserID)
+}
+
+// closeRoom is a handler for a Photon webhook that is called when a room is closed
 func closeRoom(c *fiber.Ctx) error {
+
+	fmt.Println("Room closed.")
+
 	// New room struct
-	room := new(closeRoomRequest)
+	room := new(CloseRoomRequest)
 
 	// Parse body into struct
 	if err := c.BodyParser(room); err != nil {
 		return c.Status(400).SendString(err.Error())
 	}
-
-	fmt.Println("Room Closed: " + room.GameID + ", Code: " + strconv.Itoa(roomCodes[room.GameID]))
-	fmt.Println("Details: " + c.Request().String())
 
 	delete(roomCodes, room.GameID)
 
-	var response = RoomResponse{
-		"",
-		0,
-	}
+	fmt.Println("Room successfully removed: " + room.GameID)
 
-	return c.JSON(response)
+	return c.JSON(RoomResponse{"", 0}) // Success.
 }
 
-func roomCode(c *fiber.Ctx) error {
-	var gameID = c.Params("*")
+// getNextCode generates the next unique room code.
+func getNextCode() RoomCode {
 
-	if code, ok := roomCodes[gameID]; ok {
-		var codeString = strconv.Itoa(code)
+	// Increment count.
+	simpleCount++
 
-		fmt.Println("Get Code: " + gameID + ", Code: " + codeString)
-		fmt.Println("Details: " + c.Request().String())
-
-		return c.SendString(codeString)
+	// Construct new room code object.
+	var roomCode = RoomCode{
+		strconv.Itoa(simpleCount),
+		false,
 	}
 
-	return c.SendStatus(404)
+	// Add it to the map.
+	roomCodes[roomCode.code] = roomCode
+
+	// Return it.
+	return roomCode
+}
+
+// timeoutRoom will remove a room if it was not created by Photon after 10 seconds.
+func timeoutRoom(roomCode *RoomCode) {
+	fmt.Println("Set timeout for room: " + roomCode.code)
+	time.Sleep(10 * time.Second)
+	// If after a delay a room wasn't created by Photon we'll remove it.
+	if !roomCode.created {
+		fmt.Println("Room: " + roomCode.code + " timedout")
+		delete(roomCodes, roomCode.code)
+	} else {
+		fmt.Println("Room: " + roomCode.code + " was created, no need to timeout")
+	}
 }
