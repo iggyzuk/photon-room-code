@@ -8,54 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// FruitInterface is a collection of various fruits.
-type FruitInterface struct {
-	Page   int
-	Fruits []string
-}
-
 func main() {
 	app := fiber.New()
-
-	// Load static files like CSS, Images & JavaScript.
-	app.Static("/static", "./static")
-
-	// Returns a local HTML file.
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendFile("./templates/hello.html")
-		// navigate to => http://localhost:3000/
-	})
-
-	// Returns plain text.
-	app.Get("/hello", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, Fiber!")
-		// navigate to => http://localhost:3000/hello
-	})
-
-	// Use parameters.
-	app.Get("/parameter/:value", func(c *fiber.Ctx) error {
-		return c.SendString("Get request with value: " + c.Params("value"))
-		// navigate to => http://localhost:3000/parameter/this_is_the_parameter
-	})
-
-	// Use wildcards to design your API.
-	app.Get("/api/*", func(c *fiber.Ctx) error {
-		// return serialized JSON.
-		if c.Params("*") == "fruits" {
-
-			response := FruitInterface{
-				Page:   1,
-				Fruits: []string{"apple", "peach", "pear", "watermelon"},
-			}
-
-			return c.JSON(response)
-
-			// navigate to => http://localhost:3000/api/fruits
-		}
-
-		return c.SendString("API path: " + c.Params("*") + " -> do lookups with these values")
-		// navigate to => http://localhost:3000/api/user/iggy
-	})
 
 	// Photon webhook testing.
 	app.Post("/create-room", createRoom)
@@ -80,8 +34,9 @@ func main() {
 }
 
 var roomCodes = make(map[string]int)
+var roomCount int
 
-type CreateRoomRequest struct {
+type createRoomRequest struct {
 	ActorNr       int    `json:"ActorNr"`
 	AppVersion    string `json:"AppVersion"`
 	AppID         string `json:"AppId"`
@@ -107,7 +62,7 @@ type CreateRoomRequest struct {
 	Nickname string `json:"Nickname"`
 }
 
-type CloseRoomRequest struct {
+type closeRoomRequest struct {
 	ActorCount int    `json:"ActorCount"`
 	AppVersion string `json:"AppVersion"`
 	AppID      string `json:"AppId"`
@@ -123,11 +78,8 @@ type RoomResponse struct {
 }
 
 func createRoom(c *fiber.Ctx) error {
-
-	fmt.Println("Photon: create room: " + c.Request().String())
-
 	// New room struct
-	room := new(CreateRoomRequest)
+	room := new(createRoomRequest)
 
 	// Parse body into struct
 	if err := c.BodyParser(room); err != nil {
@@ -135,7 +87,11 @@ func createRoom(c *fiber.Ctx) error {
 	}
 
 	// Generate code
-	roomCodes[room.GameID] = 1
+	roomCount++
+	roomCodes[room.GameID] = roomCount
+
+	fmt.Println("Room Created:" + room.GameID + ", Code:" + strconv.Itoa(roomCodes[room.GameID]))
+	fmt.Println("Details" + c.Request().String())
 
 	var response = RoomResponse{
 		"",
@@ -150,12 +106,15 @@ func closeRoom(c *fiber.Ctx) error {
 	fmt.Println("Photon: close room:" + c.Request().String())
 
 	// New room struct
-	room := new(CloseRoomRequest)
+	room := new(closeRoomRequest)
 
 	// Parse body into struct
 	if err := c.BodyParser(room); err != nil {
 		return c.Status(400).SendString(err.Error())
 	}
+
+	fmt.Println("Room Closed:" + room.GameID + ", Code:" + strconv.Itoa(roomCodes[room.GameID]))
+	fmt.Println("Details" + c.Request().String())
 
 	delete(roomCodes, room.GameID)
 
@@ -169,12 +128,15 @@ func closeRoom(c *fiber.Ctx) error {
 
 func roomCode(c *fiber.Ctx) error {
 
-	var code = c.Params("*")
+	var gameID = c.Params("*")
 
-	fmt.Println("Photon: get code:" + code)
+	if code, ok := roomCodes[gameID]; ok {
+		var codeString = strconv.Itoa(code)
 
-	if val, ok := roomCodes[code]; ok {
-		return c.SendString(strconv.Itoa(val))
+		fmt.Println("Get Code:" + gameID + ", Code:" + codeString)
+		fmt.Println("Details" + c.Request().String())
+
+		return c.SendString(codeString)
 	}
 
 	return c.SendStatus(404)
