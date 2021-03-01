@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -59,6 +60,7 @@ func main() {
 	// Photon webhook testing.
 	app.Post("/create-room", createRoom)
 	app.Post("/close-room", closeRoom)
+	app.Get("/room-code/*", roomCode)
 
 	// 404 handler.
 	app.Use(func(c *fiber.Ctx) error {
@@ -77,6 +79,43 @@ func main() {
 	app.Listen(":" + port)
 }
 
+var roomCodes = make(map[string]int)
+
+type CreateRoomRequest struct {
+	ActorNr       int    `json:"ActorNr"`
+	AppVersion    string `json:"AppVersion"`
+	AppID         string `json:"AppId"`
+	CreateOptions struct {
+		MaxPlayers       int         `json:"MaxPlayers"`
+		IsVisible        bool        `json:"IsVisible"`
+		LobbyID          interface{} `json:"LobbyId"`
+		LobbyType        int         `json:"LobbyType"`
+		CustomProperties struct {
+		} `json:"CustomProperties"`
+		EmptyRoomTTL       int         `json:"EmptyRoomTTL"`
+		PlayerTTL          int         `json:"PlayerTTL"`
+		CheckUserOnJoin    bool        `json:"CheckUserOnJoin"`
+		DeleteCacheOnLeave bool        `json:"DeleteCacheOnLeave"`
+		SuppressRoomEvents bool        `json:"SuppressRoomEvents"`
+		PublishUserID      bool        `json:"PublishUserId"`
+		ExpectedUsers      interface{} `json:"ExpectedUsers"`
+	} `json:"CreateOptions"`
+	GameID   string `json:"GameId"`
+	Region   string `json:"Region"`
+	Type     string `json:"Type"`
+	UserID   string `json:"UserId"`
+	Nickname string `json:"Nickname"`
+}
+
+type CloseRoomRequest struct {
+	ActorCount int    `json:"ActorCount"`
+	AppVersion string `json:"AppVersion"`
+	AppID      string `json:"AppId"`
+	GameID     string `json:"GameId"`
+	Region     string `json:"Region"`
+	Type       string `json:"Type"`
+}
+
 // RoomResponse is what's send back to Photon.
 type RoomResponse struct {
 	State      string
@@ -86,6 +125,17 @@ type RoomResponse struct {
 func createRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: create room: " + c.Request().String())
+
+	// New room struct
+	room := new(CreateRoomRequest)
+
+	// Parse body into struct
+	if err := c.BodyParser(room); err != nil {
+		return c.Status(400).SendString(err.Error())
+	}
+
+	// Generate code
+	roomCodes[room.GameID] = 1
 
 	var response = RoomResponse{
 		"",
@@ -99,10 +149,33 @@ func closeRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Photon: close room:" + c.Request().String())
 
+	// New room struct
+	room := new(CloseRoomRequest)
+
+	// Parse body into struct
+	if err := c.BodyParser(room); err != nil {
+		return c.Status(400).SendString(err.Error())
+	}
+
+	delete(roomCodes, room.GameID)
+
 	var response = RoomResponse{
 		"",
 		0,
 	}
 
 	return c.JSON(response)
+}
+
+func roomCode(c *fiber.Ctx) error {
+
+	var code = c.Params("*")
+
+	fmt.Println("Photon: get code:" + code)
+
+	if val, ok := roomCodes[code]; ok {
+		return c.SendString(strconv.Itoa(val))
+	}
+
+	return c.SendStatus(404)
 }
