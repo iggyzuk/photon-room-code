@@ -90,8 +90,8 @@ func createRoom(c *fiber.Ctx) error {
 	roomCount++
 	roomCodes[room.GameID] = roomCount
 
-	fmt.Println("Room Created:" + room.GameID + ", Code:" + strconv.Itoa(roomCodes[room.GameID]))
-	fmt.Println("Details" + c.Request().String())
+	fmt.Println("Room Created: " + room.GameID + ", Code: " + strconv.Itoa(roomCodes[room.GameID]))
+	fmt.Println("Details: " + c.Request().String())
 
 	var response = RoomResponse{
 		"",
@@ -102,9 +102,6 @@ func createRoom(c *fiber.Ctx) error {
 }
 
 func closeRoom(c *fiber.Ctx) error {
-
-	fmt.Println("Photon: close room:" + c.Request().String())
-
 	// New room struct
 	room := new(closeRoomRequest)
 
@@ -113,8 +110,8 @@ func closeRoom(c *fiber.Ctx) error {
 		return c.Status(400).SendString(err.Error())
 	}
 
-	fmt.Println("Room Closed:" + room.GameID + ", Code:" + strconv.Itoa(roomCodes[room.GameID]))
-	fmt.Println("Details" + c.Request().String())
+	fmt.Println("Room Closed: " + room.GameID + ", Code: " + strconv.Itoa(roomCodes[room.GameID]))
+	fmt.Println("Details: " + c.Request().String())
 
 	delete(roomCodes, room.GameID)
 
@@ -127,14 +124,13 @@ func closeRoom(c *fiber.Ctx) error {
 }
 
 func roomCode(c *fiber.Ctx) error {
-
 	var gameID = c.Params("*")
 
 	if code, ok := roomCodes[gameID]; ok {
 		var codeString = strconv.Itoa(code)
 
-		fmt.Println("Get Code:" + gameID + ", Code:" + codeString)
-		fmt.Println("Details" + c.Request().String())
+		fmt.Println("Get Code: " + gameID + ", Code: " + codeString)
+		fmt.Println("Details: " + c.Request().String())
 
 		return c.SendString(codeString)
 	}
