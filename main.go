@@ -61,9 +61,9 @@ func main() {
 	app.Post("/close-room", closeRoom)
 
 	// 404 handler.
-	app.Use(func(c *fiber.Ctx) error {
-		return c.SendStatus(404) // => 404 "Not Found"
-	})
+	// app.Use(func(c *fiber.Ctx) error {
+	// 	return c.SendStatus(404) // => 404 "Not Found"
+	// })
 
 	// Get port from env vars.
 	var port = os.Getenv("PORT")
