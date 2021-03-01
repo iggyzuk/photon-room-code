@@ -81,7 +81,7 @@ func photonHandler(c *fiber.Ctx) error {
 	fmt.Println("Photon Request!")
 
 	// return serialized JSON.
-	if c.Params("*") == "GameCreate'" {
+	if c.Params("*") == "GameCreate" {
 		fmt.Println("GameCreate" + c.Request().String())
 	}
 
