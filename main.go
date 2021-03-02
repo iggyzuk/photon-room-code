@@ -1,7 +1,7 @@
 package main
 
 import (
-	server "iggyzuk.com/go-server/controllers"
+	server "github.com/iggyzuk/photon-room-code/controllers"
 )
 
 func main() {

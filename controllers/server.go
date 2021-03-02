@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"iggyzuk.com/go-server/models"
+	"github.com/iggyzuk/photon-room-code/models"
 )
 
 var roomCodes = make(map[string]*models.RoomCode) // A map of all allocated codes.

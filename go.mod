@@ -1,4 +1,4 @@
-module iggyzuk.com/go-server
+module github.com/iggyzuk/photon-room-code
 
 go 1.16
 
