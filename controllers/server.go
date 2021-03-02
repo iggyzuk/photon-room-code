@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -8,11 +9,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	. "iggyzuk.com/go-server/models"
+	"iggyzuk.com/go-server/models"
 )
 
-var roomCodes = make(map[string]*RoomCode) // A map of all allocated codes.
-var freeCodes = make([]uint16, 9999)       // A slice of all the free codes.
+var roomCodes = make(map[string]*models.RoomCode) // A map of all allocated codes.
+var freeCodes = make([]uint16, 9999)              // A slice of all the free codes.
 
 // Run starts the photon server.
 func Run() {
@@ -50,7 +51,12 @@ func Run() {
 // genCode is a handler that is called by the user to get a new code.
 func genCode(c *fiber.Ctx) error {
 
-	var roomCode = getNextCode() // Generate a new code.
+	var roomCode, err = getNextCode() // Generate a new code.
+
+	// Error handling for when all codes are used up.
+	if err != nil {
+		return c.SendString(err.Error())
+	}
 
 	fmt.Println("Generated a new code: " + roomCode.Code)
 
@@ -65,7 +71,7 @@ func createRoom(c *fiber.Ctx) error {
 	fmt.Println("New room created.")
 
 	// New room struct.
-	room := new(CreateRoomRequest)
+	room := new(models.CreateRoomRequest)
 
 	// Parse body into struct.
 	if err := c.BodyParser(room); err != nil {
@@ -75,7 +81,7 @@ func createRoom(c *fiber.Ctx) error {
 	if roomCode, ok := roomCodes[room.GameID]; ok {
 		roomCode.Created = true // Confirm that the room was created by Photon.
 		fmt.Println("Confirming that room: " + roomCode.Code + " has been created by Photon.")
-		return c.JSON(RoomResponse{"", 0}) // Success.
+		return c.JSON(models.RoomResponse{"", 0}) // Success.
 	}
 
 	// The code must have been removed – due to timeout.
@@ -89,7 +95,7 @@ func closeRoom(c *fiber.Ctx) error {
 	fmt.Println("Room closed.")
 
 	// New room struct
-	room := new(CloseRoomRequest)
+	room := new(models.CloseRoomRequest)
 
 	// Parse body into struct
 	if err := c.BodyParser(room); err != nil {
@@ -101,11 +107,15 @@ func closeRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Room successfully removed: " + room.GameID)
 
-	return c.JSON(RoomResponse{"", 0}) // Success.
+	return c.JSON(models.RoomResponse{"", 0}) // Success.
 }
 
 // getNextCode generates the next unique room code.
-func getNextCode() *RoomCode {
+func getNextCode() (*models.RoomCode, error) {
+
+	if len(freeCodes) == 0 {
+		return nil, errors.New("ran out of codes")
+	}
 
 	// Get a random free code.
 	var freeCodeIndex = rand.Intn(len(freeCodes))
@@ -116,26 +126,26 @@ func getNextCode() *RoomCode {
 	freeCodes = freeCodes[:len(freeCodes)-1]
 
 	// Construct new room code object.
-	var roomCode = &RoomCode{
-		strconv.Itoa(int(randomFreeCode)), // Cast code from uint16 to string.
-		false,
-	}
+	var roomCode = new(models.RoomCode)
+	roomCode.Code = fmt.Sprintf("%04d", int(randomFreeCode)) // Cast code from uint16 to string.
+	roomCode.Created = false
 
 	// Add it to the map.
 	roomCodes[roomCode.Code] = roomCode
 
 	// Return it.
-	return roomCode
+	return roomCode, nil
 }
 
 // returnCode gives back the code to the be used again.
 func returnCode(code string) {
 	var codeInt, _ = strconv.Atoi(code)
+	fmt.Println("Code returned: " + strconv.Itoa(codeInt))
 	freeCodes = append(freeCodes, uint16(codeInt))
 }
 
 // timeoutRoom will remove a room if it was not created by Photon after 10 seconds.
-func timeoutRoom(roomCode *RoomCode) {
+func timeoutRoom(roomCode *models.RoomCode) {
 	fmt.Println("Set timeout for room: " + roomCode.Code)
 	time.Sleep(10 * time.Second)
 	// If after a delay a room wasn't created by Photon we'll remove it.
