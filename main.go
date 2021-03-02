@@ -60,7 +60,7 @@ type RoomResponse struct {
 }
 
 var roomCodes = make(map[string]*RoomCode) // A map of all allocated codes.
-var freeCodes = make([]uint16, 5)          // A slide of all the free codes.
+var freeCodes = make([]uint16, 3)          // A slide of all the free codes.
 
 func main() {
 	app := fiber.New()
@@ -89,6 +89,18 @@ func main() {
 	if port == "" {
 		port = "3000"
 	}
+
+	var printFreeCodes = func() {
+		for {
+			for _, code := range freeCodes {
+				fmt.Println(code)
+			}
+			fmt.Println("-")
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	go printFreeCodes()
 
 	// Start server on http://${heroku-url}:${port}
 	app.Listen(":" + port)
