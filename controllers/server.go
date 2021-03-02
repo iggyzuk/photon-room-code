@@ -81,7 +81,12 @@ func createRoom(c *fiber.Ctx) error {
 	if roomCode, ok := roomCodes[room.GameID]; ok {
 		roomCode.Created = true // Confirm that the room was created by Photon.
 		fmt.Println("Confirming that room: " + roomCode.Code + " has been created by Photon.")
-		return c.JSON(models.RoomResponse{"", 0}) // Success.
+
+		// Success.
+		return c.JSON(models.RoomResponse{
+			State:      "",
+			ResultCode: 0,
+		})
 	}
 
 	// The code must have been removed – due to timeout.
@@ -107,7 +112,11 @@ func closeRoom(c *fiber.Ctx) error {
 
 	fmt.Println("Room successfully removed: " + room.GameID)
 
-	return c.JSON(models.RoomResponse{"", 0}) // Success.
+	// Success.
+	return c.JSON(models.RoomResponse{
+		State:      "",
+		ResultCode: 0,
+	})
 }
 
 // getNextCode generates the next unique room code.
@@ -126,9 +135,10 @@ func getNextCode() (*models.RoomCode, error) {
 	freeCodes = freeCodes[:len(freeCodes)-1]
 
 	// Construct new room code object.
-	var roomCode = new(models.RoomCode)
-	roomCode.Code = fmt.Sprintf("%04d", int(randomFreeCode)) // Cast code from uint16 to string.
-	roomCode.Created = false
+	var roomCode = &models.RoomCode{
+		Code:    fmt.Sprintf("%04d", int(randomFreeCode)), // Cast code from uint16 to string.
+		Created: false,
+	}
 
 	// Add it to the map.
 	roomCodes[roomCode.Code] = roomCode
