@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -9,39 +10,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func main() {
-	app := fiber.New()
-
-	// Photon webhook testing.
-	app.Get("/room/gen_code", genCode)
-	app.Post("/room/create", createRoom)
-	app.Post("/room/close", closeRoom)
-
-	// 404 handler.
-	app.Use(func(c *fiber.Ctx) error {
-		return c.SendStatus(404) // => 404 "Not Found"
-	})
-
-	// Get port from env vars.
-	var port = os.Getenv("PORT")
-
-	// Use a default port if none was set in env.
-	if port == "" {
-		port = "3000"
-	}
-
-	// Start server on http://${heroku-url}:${port}
-	app.Listen(":" + port)
-}
-
 // RoomCode is a server-side type that keeps track of all codes.
 type RoomCode struct {
 	code    string
 	created bool
 }
-
-var roomCodes = make(map[string]*RoomCode)
-var simpleCount int
 
 // CreateRoomRequest is a Photon type that is sent to us when a new room is created.
 type CreateRoomRequest struct {
@@ -84,6 +57,41 @@ type CloseRoomRequest struct {
 type RoomResponse struct {
 	State      string
 	ResultCode int
+}
+
+var roomCodes = make(map[string]*RoomCode) // A map of all allocated codes.
+var freeCodes = make([]uint16, 5)          // A slide of all the free codes.
+
+func main() {
+	app := fiber.New()
+
+	rand.Seed(time.Now().Unix()) // initialize global pseudo random generator
+
+	// Create free codes.
+	for i := 0; i < len(freeCodes); i++ {
+		freeCodes[i] = uint16(i)
+	}
+
+	// Photon webhook testing.
+	app.Get("/room/gen_code", genCode)
+	app.Post("/room/create", createRoom)
+	app.Post("/room/close", closeRoom)
+
+	// 404 handler.
+	app.Use(func(c *fiber.Ctx) error {
+		return c.SendStatus(404) // => 404 "Not Found"
+	})
+
+	// Get port from env vars.
+	var port = os.Getenv("PORT")
+
+	// Use a default port if none was set in env.
+	if port == "" {
+		port = "3000"
+	}
+
+	// Start server on http://${heroku-url}:${port}
+	app.Listen(":" + port)
 }
 
 // genCode is a handler that is called by the user to get a new code.
@@ -135,6 +143,7 @@ func closeRoom(c *fiber.Ctx) error {
 		return c.Status(400).SendString(err.Error())
 	}
 
+	returnCode(room.GameID)
 	delete(roomCodes, room.GameID)
 
 	fmt.Println("Room successfully removed: " + room.GameID)
@@ -145,12 +154,17 @@ func closeRoom(c *fiber.Ctx) error {
 // getNextCode generates the next unique room code.
 func getNextCode() *RoomCode {
 
-	// Increment count.
-	simpleCount++
+	// Get a random free code.
+	var freeCodeIndex = rand.Intn(len(freeCodes))
+	var randomFreeCode = freeCodes[freeCodeIndex]
+
+	// Remove (reslice) the free code from the list.
+	freeCodes[randomFreeCode] = freeCodes[len(freeCodes)-1]
+	freeCodes = freeCodes[:len(freeCodes)-1]
 
 	// Construct new room code object.
 	var roomCode = &RoomCode{
-		strconv.Itoa(simpleCount),
+		strconv.Itoa(int(randomFreeCode)), // Cast code from uint16 to string.
 		false,
 	}
 
@@ -161,6 +175,12 @@ func getNextCode() *RoomCode {
 	return roomCode
 }
 
+// returnCode gives back the code to the be used again.
+func returnCode(code string) {
+	var codeInt, _ = strconv.Atoi(code)
+	freeCodes = append(freeCodes, uint16(codeInt))
+}
+
 // timeoutRoom will remove a room if it was not created by Photon after 10 seconds.
 func timeoutRoom(roomCode *RoomCode) {
 	fmt.Println("Set timeout for room: " + roomCode.code)
@@ -168,6 +188,7 @@ func timeoutRoom(roomCode *RoomCode) {
 	// If after a delay a room wasn't created by Photon we'll remove it.
 	if !roomCode.created {
 		fmt.Println("Room: " + roomCode.code + " timedout")
+		returnCode(roomCode.code)
 		delete(roomCodes, roomCode.code)
 	} else {
 		fmt.Println("Room: " + roomCode.code + " was created, no need to timeout")
