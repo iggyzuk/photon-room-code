@@ -171,7 +171,7 @@ func getNextCode() *RoomCode {
 	var randomFreeCode = freeCodes[freeCodeIndex]
 
 	// Remove (reslice) the free code from the list.
-	freeCodes[randomFreeCode] = freeCodes[len(freeCodes)-1]
+	freeCodes[freeCodeIndex] = freeCodes[len(freeCodes)-1]
 	freeCodes = freeCodes[:len(freeCodes)-1]
 
 	// Construct new room code object.
