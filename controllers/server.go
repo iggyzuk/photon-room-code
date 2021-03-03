@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/iggyzuk/photon-room-code/models"
 )
 
@@ -18,6 +20,10 @@ var freeCodes = make([]uint16, 9999)              // A slice of all the free cod
 // Run starts the photon server.
 func Run() {
 	app := fiber.New()
+
+	// Default middleware config
+	app.Use(logger.New())
+	app.Use("/monitor", monitor.New())
 
 	rand.Seed(time.Now().Unix()) // initialize global pseudo random generator
 
