@@ -25,12 +25,12 @@ You must setup Photon webhooks for the API to function properly. We're intereste
 5. Press edit
 6. Set the details as following
 
-AsyncJoin: true
-BaseURL: https://example.herokuapp.com
-HasErrorInfo: true
-IsPersistent: true
-PathClose: room/close
-PathCreate room/create
+- AsyncJoin: true
+- BaseURL: https://example.herokuapp.com
+- HasErrorInfo: true
+- IsPersistent: true
+- PathClose: room/close
+- PathCreate room/create
 
 # Handlers
 
