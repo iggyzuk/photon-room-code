@@ -64,11 +64,11 @@ PhotonNetwork.CreateRoom(code, roomOptions, TypedLobby.Default);
 
 ## /room/create
 
-Called by a Photon when a new room is created. We use it because we need to confirm that a room was created. Unconfirmed codes timeout after 10 seconds.
+Called by Photon when a new room is created. We use it because we need to confirm that a room was created. Unconfirmed codes timeout after 10 seconds.
 
 ## /room/close
 
-Called by a Photon when a room is closed. We use it to release a code, allow it to be used again by another player.
+Called by Photon when a room is closed. We use it to release a code, allow it to be used again by another player.
 
 # Host
 You can easily host it on [Heroku](https://heroku.com/).
